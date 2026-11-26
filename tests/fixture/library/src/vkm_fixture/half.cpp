@@ -1,6 +1,10 @@
+#include "vkm_fixture/half.h"
+
 #include <cassert>
 
+#include "vkm_fixture/even.h"
+
 int vkmFixtureHalf(int even) {
-    assert(even % 2 == 0);
+    assert(vkmFixtureEven(even));
     return even / 2;
 }

@@ -18,7 +18,7 @@ add_executable(vkm_test_fixture
 )
 add_executable(vkm_test_fixture_broken ${CMAKE_CURRENT_SOURCE_DIR}/fixture/broken.cpp)
 
-# The fixture libraries: vkm_fixture requires vkm_fixture_needed and keeps its asserts; vkm_careless does neither, and calls Tracy.
+# The fixture libraries: vkm_fixture requires vkm_fixture_needed, keeps its asserts and keeps its private headers private; vkm_careless does none of these, and calls Tracy.
 add_library(vkm_fixture_needed INTERFACE)
 add_subdirectory(fixture/library)
 add_subdirectory(fixture/careless)
@@ -138,6 +138,16 @@ vkm_test_flags("vkm_test: the flags check fails a library that drops its asserts
     PROFILER ON
 )
 vkm_test_flags("vkm_test: the flags check fails a library that calls Tracy though its profiler is off" vkm_careless ASSERTS OFF)
+vkm_test_includes("vkm_test: the includes check passes a library whose every include is its own, the standard library's or one a rule allows" vkm_fixture
+    ALLOW "needed/.*" "windows.h in system.h"
+)
+foreach(_promise
+    "a public header that includes a private one"
+    "an include no rule allows"
+    "an include its rule allows in another file only"
+)
+    vkm_test_includes("vkm_test: the includes check fails ${_promise}" vkm_careless ALLOW "windows.h in system.h")
+endforeach()
 # Each check's own failure, by what it says: the check stops with it, which is the test's pass.
 set_tests_properties("vkm_test: the consumer check fails a library that configures without a target it requires"
     PROPERTIES PASS_REGULAR_EXPRESSION "without vkm_fixture_needed it configures"
@@ -151,10 +161,16 @@ set_tests_properties("vkm_test: the flags check fails a library that drops its a
 set_tests_properties("vkm_test: the flags check fails a library that calls Tracy though its profiler is off"
     PROPERTIES PASS_REGULAR_EXPRESSION "calls Tracy, though its profiler is off"
 )
-
-add_test(NAME "vkm_test: every include is its own or the standard library's, the system's only where a file reaches it"
-    COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}/src -P ${CMAKE_CURRENT_SOURCE_DIR}/includes.cmake
+set_tests_properties("vkm_test: the includes check fails a public header that includes a private one"
+    PROPERTIES PASS_REGULAR_EXPRESSION "half.h: #include \"vkm_careless/inside.h\" \\(a public header, including a private one\\)"
 )
-set_tests_properties("vkm_test: every include is its own or the standard library's, the system's only where a file reaches it"
-    PROPERTIES LABELS vkm_test
+set_tests_properties("vkm_test: the includes check fails an include no rule allows"
+    PROPERTIES PASS_REGULAR_EXPRESSION "inside.h: #include \"elsewhere/thing.h\"\n"
+)
+set_tests_properties("vkm_test: the includes check fails an include its rule allows in another file only"
+    PROPERTIES PASS_REGULAR_EXPRESSION "inside.h: #include <windows.h> \\(only system.h may include it\\)"
+)
+
+vkm_test_includes("vkm_test: every include is its own or the standard library's, the system's only where a file reaches it" ${PROJECT_NAME}
+    ALLOW "windows.h in main.cpp" "malloc.h in allocations.cpp" "sys/resource.h|sys/wait.h|unistd.h in scratch.cpp"
 )

@@ -29,10 +29,11 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 target_compile_options(${PROJECT_NAME} PRIVATE ${_vkm_test_warnings})
 
-# What a suite's CMake calls, defined for whoever adds the library: vkm_discover_tests, vkm_test_consumer and vkm_test_flags.
+# What a suite's CMake calls, defined for whoever adds the library: vkm_discover_tests, vkm_test_consumer, vkm_test_flags and vkm_test_includes.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/discover.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/consumer.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/flags.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/includes.cmake)
 
 # The suite (tests/): built alone, the library tests itself; a consumer asks for it.
 option(VKM_TEST_BUILD_TESTS "Build the vkm_test test suite" ${PROJECT_IS_TOP_LEVEL})

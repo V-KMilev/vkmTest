@@ -53,13 +53,14 @@ const Vkm::Test::Hooks g_hooks(openLog);
 
 The binary runs one test: `<binary> --list` names them and `<binary> "<area>: <what works>"` runs one, exiting 0 when it passed, 1 when it failed, 77 when it skipped and 2 when it could not run.
 
-| CMake function                                                                     | What                                                                                                                                                                                                                                                                                                                                                                                                 |
-|------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `vkm_discover_tests(<target> <suite> [LABELS <label>...] [WORKING_DIRECTORY <dir>])` | Each test the binary lists is a CTest of its own when CTest runs: named as listed, labeled with its area, `<suite>` and `LABELS`, run in `WORKING_DIRECTORY` or else the binary's folder, skipped on 77, stopped after 300 seconds. Under a multi-config generator it reads the build type `ctest -C` names. A binary that is not built, or cannot list its tests, stands as one failing test, `<suite>: <target> ...`. |
-| `vkm_test_consumer(<name> <library> [REQUIRES <target>...])`                       | The CTest `<name>`: the target `<library>`'s folder, added to a project of its own as a consumer adds it, configures with each target it requires added first, and without any one of them stops with an error that says `requires the target '<target>'`.                                                                                                                                           |
-| `vkm_test_flags(<name> <library> ASSERTS <bool> [PROFILER <bool>])`                | The CTest `<name>`: the library's sources, `src/<library>/` under its folder, compile with `-UNDEBUG` exactly when `ASSERTS` is on; where they have `NDEBUG` the archive calls no assert; with `PROFILER` off, as by default, it calls nothing of Tracy's. It reads the toolchain's `nm`.                                                                                                             |
+| CMake function                                                                       | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+|--------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `vkm_discover_tests(<target> <suite> [LABELS <label>...] [WORKING_DIRECTORY <dir>])` | Each test the binary lists is a CTest of its own when CTest runs: named as listed, labeled with its area, `<suite>` and `LABELS`, run in `WORKING_DIRECTORY` or else the binary's folder, skipped on 77, stopped after 300 seconds. Under a multi-config generator it reads the build type `ctest -C` names. A binary that is not built, or cannot list its tests, stands as one failing test, `<suite>: <target> ...`.                                                                                           |
+| `vkm_test_consumer(<name> <library> [REQUIRES <target>...])`                         | The CTest `<name>`: the target `<library>`'s folder, added to a project of its own as a consumer adds it, configures with each target it requires added first, and without any one of them stops with an error that says `requires the target '<target>'`.                                                                                                                                                                                                                                                        |
+| `vkm_test_flags(<name> <library> ASSERTS <bool> [PROFILER <bool>])`                  | The CTest `<name>`: the library's sources, `src/<library>/` under its folder, compile with `-UNDEBUG` exactly when `ASSERTS` is on; where they have `NDEBUG` the archive calls no assert; with `PROFILER` off, as by default, it calls nothing of Tracy's. It reads the toolchain's `nm`.                                                                                                                                                                                                                         |
+| `vkm_test_includes(<name> <library> [ALLOW <rule>...])`                              | The CTest `<name>`: every `#include` of the library's, in `src/<library>/` and `private/<library>/` under its folder, is its own, the standard library's (`<name>`) or one a rule allows, and no public header (`src/`) includes a private one. A rule is `"<headers>"`, which any of its files may include, or `"<headers> in <files>"`, which those alone may, each a regular expression matched whole against the include's path or the file's name: `ALLOW "glm/.*" "miniaudio.h in device.cpp\|decode.cpp"`. |
 
-The two checks are labeled with their name's prefix, before its colon.
+The three checks are labeled with their name's prefix, before its colon.
 
 ## Requirements
 
@@ -67,7 +68,7 @@ CMake 3.25 or above and a C++17 compiler: GCC or Clang, on Linux or on Windows (
 
 ## Use
 
-Add it as a submodule and `add_subdirectory` it; it requires no other target, and once it is added the three functions are defined.
+Add it as a submodule and `add_subdirectory` it; it requires no other target, and once it is added the four functions are defined.
 
 ```
 git submodule add https://github.com/V-KMilev/vkmTest.git modules/vkmTest
@@ -81,18 +82,19 @@ The library is `vkm_test`, static, holding the runner's `main`: a suite's binary
 
 ## What it holds
 
-| File                                      | What                                                                                                        |
-|-------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| File                                      | What                                                                                                       |
+|-------------------------------------------|------------------------------------------------------------------------------------------------------------|
 | `vkm_test/check.h`                        | `TEST`, `CHECK`, `REQUIRE`, `CHECK_NEAR`, `nearerSign`, `show`, `fail`, `Stop`, `VKM_TEST_LIBRARY_ASSERTS` |
-| `vkm_test/scratch.h`                      | `scratch`, `writeText`, `readText`, `logPath`, `logText`, `countInLog`, `skip`, `inChild`, `allocations`    |
-| `vkm_test/hooks.h`                        | `Hooks` and `Case`, what a suite runs around each test, which the runner's `main` calls                     |
-| `cmake/discover.cmake`                    | `vkm_discover_tests`                                                                                        |
-| `cmake/consumer.cmake`, `cmake/consumer/` | `vkm_test_consumer`                                                                                         |
-| `cmake/flags.cmake`                       | `vkm_test_flags`                                                                                            |
+| `vkm_test/scratch.h`                      | `scratch`, `writeText`, `readText`, `logPath`, `logText`, `countInLog`, `skip`, `inChild`, `allocations`   |
+| `vkm_test/hooks.h`                        | `Hooks` and `Case`, what a suite runs around each test, which the runner's `main` calls                    |
+| `cmake/discover.cmake`                    | `vkm_discover_tests`                                                                                       |
+| `cmake/consumer.cmake`, `cmake/consumer/` | `vkm_test_consumer`                                                                                        |
+| `cmake/flags.cmake`                       | `vkm_test_flags`                                                                                           |
+| `cmake/includes.cmake`                    | `vkm_test_includes`                                                                                        |
 
 ## Tests
 
-`tests/` holds the harness's own suite, built with `VKM_TEST_BUILD_TESTS`: each test is a CTest named `vkm_test: <what works>` and labeled `vkm_test`, so `ctest -L vkm_test` runs them in the tree of a consumer that calls `enable_testing()`. What the harness makes of a test that fails, skips or throws is seen from outside: `tests/fixture/` holds a suite whose tests end each way on purpose, which `tests/run.cmake` runs one at a time and `tests/discovery.cmake` reads back through CTest, and two small libraries, one in a vkm library's shape and one not, for the consumer and flags checks.
+`tests/` holds the harness's own suite, built with `VKM_TEST_BUILD_TESTS`: each test is a CTest named `vkm_test: <what works>` and labeled `vkm_test`, so `ctest -L vkm_test` runs them in the tree of a consumer that calls `enable_testing()`. What the harness makes of a test that fails, skips or throws is seen from outside: `tests/fixture/` holds a suite whose tests end each way on purpose, which `tests/run.cmake` runs one at a time and `tests/discovery.cmake` reads back through CTest, and two small libraries, one in a vkm library's shape and one not, for the consumer, flags and includes checks.
 
 ## License
 

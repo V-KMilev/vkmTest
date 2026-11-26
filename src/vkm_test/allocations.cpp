@@ -4,7 +4,11 @@
 #include <cstdlib>
 #include <new>
 
-// A sanitizer brings an operator new and delete of its own, to watch every block, and on Windows a DLL's calls stay with its own runtime: the count holds every call elsewhere alone.
+#if defined(_WIN32)
+    #include <malloc.h>
+#endif
+
+// A sanitizer brings an operator new and delete of its own, to watch every block: the counting replacements stay out of its way, and allocations() skips.
 #if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
     #define VKM_TEST_SANITIZED
 #elif defined(__has_feature)
@@ -12,11 +16,8 @@
         #define VKM_TEST_SANITIZED
     #endif
 #endif
-#if !defined(_WIN32) && !defined(VKM_TEST_SANITIZED)
-    #define VKM_TEST_COUNTED
-#endif
 
-#if defined(VKM_TEST_COUNTED)
+#if !defined(VKM_TEST_SANITIZED)
 
 namespace {
 
@@ -32,8 +33,21 @@ void* counted(std::size_t size) {
 void* countedAligned(std::size_t size, std::align_val_t align) {
     g_allocations.fetch_add(1, std::memory_order_relaxed);
     const std::size_t alignment = static_cast<std::size_t>(align);
+#if defined(_WIN32)
+    return _aligned_malloc(size ? size : 1, alignment);
+#else
     // aligned_alloc takes a whole number of alignments.
     return std::aligned_alloc(alignment, (size / alignment + 1) * alignment);
+#endif
+}
+
+/// Returns a block countedAligned gave.
+void releaseAligned(void* block) {
+#if defined(_WIN32)
+    _aligned_free(block);
+#else
+    std::free(block);
+#endif
 }
 
 } // namespace
@@ -43,9 +57,7 @@ void* countedAligned(std::size_t size, std::align_val_t align) {
 namespace Vkm::Test {
 
 uint64_t allocations() {
-#if defined(_WIN32)
-    skip("a DLL's own operator new is not counted on Windows");
-#elif defined(VKM_TEST_SANITIZED)
+#if defined(VKM_TEST_SANITIZED)
     skip("a sanitizer's own operator new is not counted");
 #else
     return g_allocations.load(std::memory_order_relaxed);
@@ -54,14 +66,14 @@ uint64_t allocations() {
 
 } // namespace Vkm::Test
 
-#if defined(VKM_TEST_COUNTED)
+#if !defined(VKM_TEST_SANITIZED)
 
 // GCC 11 and up, inlining a delete here or in a test, sees std::free take a block from operator new; these replacements are the pair that makes it right, so the warning is off to the end of the file.
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 11
     #pragma GCC diagnostic ignored "-Wmismatched-new-delete"
 #endif
 
-// Every form, counted for allocations(): the suite's and the static libraries' calls, and a shared library's where the platform resolves them here.
+// Every form, counted for allocations(): the suite's and the static libraries' calls, and a shared library's where the platform resolves them here, which a Windows DLL's, kept with its own runtime, are not.
 void* operator new(std::size_t size) {
     if (void* block = counted(size)) return block;
     throw std::bad_alloc();
@@ -86,11 +98,13 @@ void operator delete(void* block, std::size_t) noexcept { std::free(block); }
 void operator delete[](void* block, std::size_t) noexcept { std::free(block); }
 void operator delete(void* block, const std::nothrow_t&) noexcept { std::free(block); }
 void operator delete[](void* block, const std::nothrow_t&) noexcept { std::free(block); }
-void operator delete(void* block, std::align_val_t) noexcept { std::free(block); }
-void operator delete[](void* block, std::align_val_t) noexcept { std::free(block); }
-void operator delete(void* block, std::size_t, std::align_val_t) noexcept { std::free(block); }
-void operator delete[](void* block, std::size_t, std::align_val_t) noexcept { std::free(block); }
-void operator delete(void* block, std::align_val_t, const std::nothrow_t&) noexcept { std::free(block); }
-void operator delete[](void* block, std::align_val_t, const std::nothrow_t&) noexcept { std::free(block); }
+void operator delete(void* block, std::align_val_t) noexcept { releaseAligned(block); }
+void operator delete[](void* block, std::align_val_t) noexcept { releaseAligned(block); }
+void operator delete(void* block, std::size_t, std::align_val_t) noexcept { releaseAligned(block); }
+void operator delete[](void* block, std::size_t, std::align_val_t) noexcept { releaseAligned(block); }
+void operator delete(void* block, std::align_val_t, const std::nothrow_t&) noexcept { releaseAligned(block); }
+void operator delete[](void* block, std::align_val_t, const std::nothrow_t&) noexcept {
+    releaseAligned(block);
+}
 
 #endif

@@ -1,7 +1,8 @@
 # Every #include under src/vkm_test is the library's own or the standard library's, or a system header in a file that reaches the system, so it depends on nothing of ours (cmake -P, -DSOURCE_DIR=<src>).
 
-# The system headers each file that reaches the system may include: Windows' in the runner, POSIX's in the child process.
+# The system headers each file that reaches the system may include: Windows' in the runner and the aligned blocks, POSIX's in the child process.
 set(_system_main.cpp "windows.h")
+set(_system_allocations.cpp "malloc.h")
 set(_system_scratch.cpp "sys/resource.h|sys/wait.h|unistd.h")
 
 file(GLOB_RECURSE _files

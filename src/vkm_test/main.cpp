@@ -105,12 +105,8 @@ void setEnvironment(const char* key, const std::filesystem::path& value) {
 #endif
 }
 
-/// Points the user's own folders at @p home. vkm's pinned tools stay where the user's LOCALAPPDATA keeps them, as VKM_TOOLS_DIR, so a test that runs vkm finds them and never fetches them again into its folder.
+/// Points the user's own folders at @p home.
 void moveUserFolders(const std::filesystem::path& home) {
-    const char* local = std::getenv("LOCALAPPDATA");
-    if (local && !std::getenv("VKM_TOOLS_DIR")) {
-        setEnvironment("VKM_TOOLS_DIR", std::filesystem::path(local) / "vkm" / "tools");
-    }
     for (const char* folder : {"XDG_CONFIG_HOME", "XDG_STATE_HOME", "APPDATA", "LOCALAPPDATA"}) {
         setEnvironment(folder, home);
     }

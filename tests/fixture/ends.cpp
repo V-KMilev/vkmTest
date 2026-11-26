@@ -1,7 +1,6 @@
 // The fixture suite: tests that fail, skip and throw on purpose, each run alone by tests/run.cmake, which checks what came of it.
 
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <limits>
 #include <stdexcept>
@@ -67,9 +66,4 @@ TEST("a test that fails, writing in its folder") {
 TEST("a test run again, writing in its folder") {
     Vkm::Test::writeText(Vkm::Test::scratch() / "kept.txt", "written");
     CHECK(false);
-}
-
-TEST("a test that says where vkm's tools are") {
-    const char* tools = std::getenv("VKM_TOOLS_DIR");
-    std::printf("VKM_TOOLS_DIR=%s\n", tools ? std::filesystem::path(tools).generic_string().c_str() : "");
 }

@@ -88,11 +88,6 @@ _vkm_test_run("a run named in VKM_TEST_AGAIN has a folder of its own beside the 
     ENVIRONMENT VKM_TEST_AGAIN=fresh
     KEPT ${_vkm_test_folders}/a_test_run_again_writing_in_its_folder_fresh/kept.txt
 )
-_vkm_test_run("vkm's tools stay where the user's LOCALAPPDATA keeps them"
-    BINARY vkm_test_fixture TEST "fixture: a test that says where vkm's tools are" STATUS 0
-    ENVIRONMENT LOCALAPPDATA=${CMAKE_CURRENT_BINARY_DIR}/local VKM_TOOLS_DIR=
-    SAYS "VKM_TOOLS_DIR=${CMAKE_CURRENT_BINARY_DIR}/local/vkm/tools"
-)
 _vkm_test_run("a test's area is the folder under the last tests/ in its path, either slash a separator"
     BINARY vkm_test_fixture TEST --list STATUS 0
     SAYS "net: a test under two tests folders, in the last one's area" "physics: a test whose path takes backslashes"

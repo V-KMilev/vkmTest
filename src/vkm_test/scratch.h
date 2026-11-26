@@ -61,7 +61,7 @@ enum class Ended {
  */
 Ended inChild(const std::function<void()>& body);
 
-/// How many times the process has called operator new so far, in any form, on any thread: a hot path that allocates nothing leaves it where it was. It skips the test on Windows, where a DLL's own calls are not counted, and under a sanitizer, which brings its own operator new.
+/// How many times the process has called operator new so far, in any form, on any thread: a hot path that allocates nothing leaves it where it was. On Windows a DLL's own calls are not counted; under a sanitizer, which brings its own operator new, it skips the test.
 uint64_t allocations();
 
 } // namespace Vkm::Test
